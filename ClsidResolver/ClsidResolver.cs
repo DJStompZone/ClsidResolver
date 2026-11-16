@@ -16,7 +16,7 @@ namespace ClsidResolver
         /// <summary>
         /// Creates a Volume Shadow Copy to extract the locked SRD database, then queries it for the given CLSID.
         /// </summary>
-        public static string ResolveWinRtTask(string clsid)
+        public static string ResolveWinRtTask(string clsid, bool dumpSchema = false)
         {
             string tempDbPath = Path.Combine(Path.GetTempPath(), $"Extracted_SRD_{Guid.NewGuid()}.srd");
             #if DEBUG
@@ -38,7 +38,7 @@ namespace ClsidResolver
                 File.Copy(shadowFilePath, tempDbPath, true);
                 Console.WriteLine($"Successfully extracted locked DB to: {tempDbPath}");
 
-                return QuerySrdForClsid(tempDbPath, clsid);
+                return QuerySrdForClsid(tempDbPath, clsid, dumpSchema);
             }
             catch (Exception ex)
             {
@@ -64,15 +64,13 @@ namespace ClsidResolver
             }
         }
 
-        private static string QuerySrdForClsid(string dbPath, string clsid)
+        private static string QuerySrdForClsid(string dbPath, string clsid, bool dumpSchema)
         {
             SQLitePCL.Batteries.Init();
 
             string formattedClsid = clsid.Trim('{', '}').ToLower();
             var results = new System.Text.StringBuilder();
-            #if DEBUG
             var schema = new System.Text.StringBuilder();
-            #endif
 
             using var connection = new SqliteConnection($"Data Source={dbPath}");
             connection.Open();
@@ -88,9 +86,11 @@ namespace ClsidResolver
                 }
             }
 
-            #if DEBUG
-            schema.AppendLine("SRD database schema:");
-            #endif
+            if (dumpSchema)
+            {
+                schema.AppendLine("SRD database schema:");
+            }
+
             foreach (var table in tables)
             {
                 var columns = new System.Collections.Generic.List<string>();
@@ -104,9 +104,10 @@ namespace ClsidResolver
                     }
                 }
 
-                #if DEBUG
-                schema.AppendLine($"  {table}: {(columns.Count > 0 ? string.Join(", ", columns) : "(no columns)")}");
-                #endif
+                if (dumpSchema)
+                {
+                    schema.AppendLine($"  {table}: {(columns.Count > 0 ? string.Join(", ", columns) : "(no columns)")}");
+                }
 
                 if (columns.Count == 0) continue;
 
@@ -157,18 +158,10 @@ namespace ClsidResolver
 
             if (results.Length > 0)
             {
-                #if DEBUG
-                return schema + "\nCLSID found in State Repository DB!" + results;
-                #else
-                return "CLSID found in State Repository DB!" + results;
-                #endif
+                return dumpSchema ? schema + "\nCLSID found in State Repository DB!" + results : "CLSID found in State Repository DB!" + results;
             }
 
-            #if DEBUG
-            return schema + "\nCLSID not found anywhere in State Repository. It is a hardcoded internal UBPM system task.";
-            #else
-            return "CLSID not found anywhere in State Repository. It is a hardcoded internal UBPM system task.";
-            #endif
+            return dumpSchema ? schema + "\nCLSID not found anywhere in State Repository. It is a hardcoded internal UBPM system task." : "CLSID not found anywhere in State Repository. It is a hardcoded internal UBPM system task.";
         }
 
         private static string? CreateShadowCopy(string driveLetter)
