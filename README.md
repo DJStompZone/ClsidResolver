@@ -116,6 +116,10 @@ The application does the following internally:
 - Some systems may block or restrict shadow-copy creation depending on policy, security settings, or permissions.
 - Output may vary depending on Windows version and the state of the local repository database.
 
+## License
+
+MIT License. See the [LICENSE](LICENSE) file for details.
+
 ## Disclaimer
 
 This project interacts with protected Windows system state and should be used only in authorized environments for legitimate troubleshooting, forensic analysis, or research purposes.
